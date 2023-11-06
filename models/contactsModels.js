@@ -71,6 +71,16 @@ const userSchema = mongoose.Schema(
       type: String,
       required: [true, "please enter valid password"],
     },
+    phone: {
+      type: String,
+      validate: {
+        validator: function (value) {
+          const phoneRegex = /^\d{10}$/;
+          return phoneRegex.test(value);
+        },
+        message: "Please enter a valid phone number",
+      },
+    },
     isEnable: {
       type: String,
       default: false,

@@ -2,6 +2,7 @@ const asyncHandler = require("express-async-handler");
 const { user, userblogs, admin } = require("../models/contactsModels");
 const AuthHelper = require("../helper/auth.helper");
 const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
 
 // Serve static files in 'uploads/' directo
 // @desc Get all data
@@ -95,8 +96,7 @@ const updateData = asyncHandler(async (request, response) => {
 
       const updatedBlog = await existingBlog.save();
       response.status(200).json(updatedBlog);
-    }
-    else{
+    } else {
       response.status(401).json({ message: "Only admin can update" });
     }
   } catch (error) {
@@ -132,15 +132,17 @@ const deleteData = asyncHandler(async (request, response) => {
 
 const registration = asyncHandler(async (request, response) => {
   console.log("create data body:- ", request.body);
-  const { email, password } = request.body;
+  const { email, password, phone } = request.body;
   try {
-    if (!email || !password) {
+    if (!email || !password || !phone) {
       response.status(400).json({ error: "All fields are mandatory" });
       return;
     }
+    const hashedPassword = await bcrypt.hash(password, 10);
     const contact = await user.create({
       email,
-      password,
+      password: hashedPassword,
+      phone,
     });
     response.status(201).json(contact);
   } catch (error) {
@@ -163,8 +165,11 @@ const login = asyncHandler(async (request, response) => {
       response.status(400).json({ error: "User not found" });
       return;
     }
-    if (password !== foundUser.password) {
+    const passwordMatch = await bcrypt.compare(password, foundUser.password);
+
+    if (!passwordMatch) {
       response.status(401).json({ error: "Invalid credentials" });
+      return;
     }
     if (foundUser.isEnable == "true") {
       response.status(401).json({
